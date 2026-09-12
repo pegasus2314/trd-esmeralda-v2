@@ -1,16 +1,36 @@
 import "server-only";
-import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
 
-// Perezoso por la misma razón que src/lib/db.ts: no crear nada a nivel
-// de módulo que dependa de variables de entorno, para que un problema
-// de configuración nunca tumbe el build completo — solo falle, con un
-// mensaje claro, si de verdad se intenta enviar un correo.
-let resendClient: Resend | null = null;
-function getResend(): Resend {
-  if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
-  return resendClient;
+/**
+ * Envío por SMTP de Gmail con una "contraseña de aplicación".
+ *
+ * Se usa Gmail y no un servicio tipo Resend porque esos exigen un
+ * dominio propio verificado para poder escribirle a cualquier
+ * destinatario: sin dominio, solo dejan enviar correos a la cuenta
+ * dueña de la API key — inservible para mandarle el QR a 300
+ * participantes. Gmail no pide dominio, firma con su propia DKIM y
+ * permite ~500 destinatarios al día, de sobra para este evento.
+ *
+ * El transporte se crea de forma perezosa por la misma razón que el
+ * cliente de Supabase (ver src/lib/db.ts): que una variable de
+ * entorno faltante nunca tumbe el build entero, solo el envío.
+ */
+let transporter: Transporter | null = null;
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+  return transporter;
 }
-const FROM = () => process.env.EMAIL_FROM ?? "TRD La Regional Esmeralda <onboarding@resend.dev>";
+
+const FROM = () =>
+  process.env.EMAIL_FROM ?? `TRD La Regional Esmeralda <${process.env.GMAIL_USER ?? ""}>`;
 
 function escapeHtml(v: string): string {
   return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]!));
@@ -88,12 +108,16 @@ export type SendResult = { ok: true } | { ok: false; error: string };
 export async function sendAccreditationEmail(
   input: AccreditationEmailInput & { qrBuffer: Buffer }
 ): Promise<SendResult> {
-  if (!process.env.RESEND_API_KEY) {
-    return { ok: false, error: "RESEND_API_KEY no está configurada." };
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    return {
+      ok: false,
+      error:
+        "Faltan GMAIL_USER / GMAIL_APP_PASSWORD. Configúralas en .env.local y en Vercel (Project Settings → Environment Variables).",
+    };
   }
 
   try {
-    const { error } = await getResend().emails.send({
+    await getTransporter().sendMail({
       from: FROM(),
       to: input.to,
       subject: `Tu credencial de acreditación · ${input.eventName}`,
@@ -102,11 +126,10 @@ export async function sendAccreditationEmail(
         {
           filename: "qr-acreditacion.png",
           content: input.qrBuffer,
-          contentId: input.qrCid,
+          cid: input.qrCid,
         },
       ],
     });
-    if (error) return { ok: false, error: error.message };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Error enviando el correo." };
