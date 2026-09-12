@@ -2,14 +2,19 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 
 /**
- * Envío por SMTP de Gmail con una "contraseña de aplicación".
+ * Envío por el relay SMTP de Brevo.
  *
- * Se usa Gmail y no un servicio tipo Resend porque esos exigen un
- * dominio propio verificado para poder escribirle a cualquier
- * destinatario: sin dominio, solo dejan enviar correos a la cuenta
- * dueña de la API key — inservible para mandarle el QR a 300
- * participantes. Gmail no pide dominio, firma con su propia DKIM y
- * permite ~500 destinatarios al día, de sobra para este evento.
+ * Se eligió Brevo porque permite verificar UNA sola dirección de
+ * correo como remitente, sin exigir un dominio propio. Los servicios
+ * tipo Resend solo dejan escribirle a la cuenta dueña de la API key
+ * mientras no verifiques un dominio — inservible para mandarle el QR
+ * a ~300 participantes. Gmail directo tampoco sirvió: sus
+ * "contraseñas de aplicación" no están disponibles en todas las
+ * cuentas.
+ *
+ * Se usa el relay SMTP y no la API REST de Brevo porque el QR viaja
+ * incrustado en el cuerpo del correo (cid:), algo que el SMTP maneja
+ * de forma nativa.
  *
  * El transporte se crea de forma perezosa por la misma razón que el
  * cliente de Supabase (ver src/lib/db.ts): que una variable de
@@ -19,18 +24,18 @@ let transporter: Transporter | null = null;
 function getTransporter(): Transporter {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp-relay.brevo.com",
+      port: 587,
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_KEY,
       },
     });
   }
   return transporter;
 }
 
-const FROM = () =>
-  process.env.EMAIL_FROM ?? `TRD La Regional Esmeralda <${process.env.GMAIL_USER ?? ""}>`;
+const FROM = () => process.env.EMAIL_FROM ?? "TRD La Regional Esmeralda <no-reply@example.com>";
 
 function escapeHtml(v: string): string {
   return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]!));
@@ -108,11 +113,11 @@ export type SendResult = { ok: true } | { ok: false; error: string };
 export async function sendAccreditationEmail(
   input: AccreditationEmailInput & { qrBuffer: Buffer }
 ): Promise<SendResult> {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  if (!process.env.BREVO_SMTP_USER || !process.env.BREVO_SMTP_KEY) {
     return {
       ok: false,
       error:
-        "Faltan GMAIL_USER / GMAIL_APP_PASSWORD. Configúralas en .env.local y en Vercel (Project Settings → Environment Variables).",
+        "Faltan BREVO_SMTP_USER / BREVO_SMTP_KEY. Configúralas en .env.local y en Vercel (Project Settings → Environment Variables).",
     };
   }
 
