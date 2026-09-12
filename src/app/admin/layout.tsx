@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentStaff, ACCREDITATION_ROLES, type StaffRole } from "@/lib/dal/auth";
+import { getCurrentStaff, ACCREDITATION_ROLES, OPS_ROLES, type StaffRole } from "@/lib/dal/auth";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { Button } from "@/components/ui/Button";
 
@@ -16,6 +16,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
 const NAV_ITEMS: { href: string; label: string; roles: StaffRole[] }[] = [
   { href: "/admin", label: "Resumen", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/acreditacion", label: "✅ Acreditación", roles: ACCREDITATION_ROLES },
+  { href: "/admin/operaciones", label: "🚌 Operaciones", roles: OPS_ROLES },
   { href: "/admin/equipos", label: "Equipos", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/rondas", label: "Rondas", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/enfrentamientos", label: "Enfrentamientos", roles: ["admin_maestro", "admin", "coordinador"] },

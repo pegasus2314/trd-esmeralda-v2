@@ -36,6 +36,16 @@ export const ACCREDITATION_ROLES: StaffRole[] = [
 ]
 
 /**
+ * Roles con acceso al Centro de Operaciones (flota, mapas, cronograma,
+ * staff de sede, incidencias) — el día del evento. "logistica" cubre
+ * tanto a "Coordinador de Flota" como a "Staff de Punto" del diseño
+ * original: no se distinguen como roles separados porque ambos
+ * necesitan los mismos permisos (actualizar buses, ver el mapa,
+ * reportar incidencias), solo cambia a qué punto están asignados.
+ */
+export const OPS_ROLES: StaffRole[] = ['admin_maestro', 'admin', 'coordinador', 'logistica']
+
+/**
  * Lee la sesión de Supabase Auth (cookie) y, si existe, su rol de staff.
  * `cache()` memoiza el resultado durante un mismo render — evita repetir
  * la consulta si varias partes del árbol llaman a esto en la misma request.
