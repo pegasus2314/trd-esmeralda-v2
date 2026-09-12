@@ -44,10 +44,10 @@ export default async function AdminOverviewPage() {
           <p className="mt-2 text-sm text-muted">{help?.body ?? "Consulta con administración sobre tus permisos."}</p>
           {ACCREDITATION_ROLES.includes(staff.role) && (
             <Link
-              href="/admin/escanear"
+              href="/admin/acreditacion"
               className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan bg-cyan px-5 py-3 font-bold text-cyan-ink"
             >
-              📷 Escanear QR de participante
+              ✅ Ir a Acreditación
             </Link>
           )}
         </Card>

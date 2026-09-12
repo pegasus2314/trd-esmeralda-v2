@@ -84,6 +84,8 @@ async function sendAccreditationEmailForDebater(debaterId: string, origin: strin
         qr_sent_count: (current?.qr_sent_count ?? 0) + 1,
       })
       .eq("id", debaterId);
+  } else {
+    console.error(`[qr-delivery] Falló el envío a ${debater.email} (debater ${debaterId}): ${result.error}`);
   }
 
   return result;

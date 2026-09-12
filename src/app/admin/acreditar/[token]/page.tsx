@@ -12,7 +12,7 @@ const STATUS_TONE = {
 } as const;
 const STATUS_LABEL = {
   pending: "PENDIENTE",
-  accredited: "ACREDITADO",
+  accredited: "PRESENTE",
   rejected: "RECHAZADO",
   cancelled: "CANCELADO",
   no_show: "NO ASISTIÓ",
@@ -83,6 +83,7 @@ export default async function AcreditarPage({ params }: PageProps<"/admin/acredi
           ["Centro educativo", debater.schoolName],
           ["Distrito", debater.district ?? "—"],
           ["Grado", debater.grade ?? "—"],
+          ["Cédula", debater.idNumber ?? "—"],
           ["Correo", debater.email ?? "—"],
           ["Teléfono", debater.phone ?? "—"],
         ].map(([label, value]) => (
@@ -93,9 +94,27 @@ export default async function AcreditarPage({ params }: PageProps<"/admin/acredi
         ))}
       </div>
 
+      {(debater.allergies || debater.medications) && (
+        <div className="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-4">
+          <strong className="block text-xs font-extrabold uppercase tracking-wide text-warning">
+            ⚠ Información médica
+          </strong>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <span className="block text-[10px] uppercase text-muted-2">Alergias</span>
+              <strong className="text-[13.5px]">{debater.allergies || "Ninguna reportada"}</strong>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase text-muted-2">Medicamentos</span>
+              <strong className="text-[13.5px]">{debater.medications || "Ninguno reportado"}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
       {debater.accreditationStatus === "accredited" ? (
         <div className="mt-5 rounded-xl border border-cyan/20 bg-cyan/5 p-4">
-          <strong className="text-cyan">✓ Participante ya acreditado</strong>
+          <strong className="text-cyan">✓ Participante presente</strong>
           <p className="mt-1 text-xs text-muted">
             {debater.accreditationVerifiedAt &&
               `Registrado el ${new Date(debater.accreditationVerifiedAt).toLocaleString("es-DO")}.`}

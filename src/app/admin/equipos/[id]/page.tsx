@@ -22,7 +22,7 @@ const STATUS_TONE: Record<string, "default" | "success" | "warning" | "danger"> 
 };
 const ACCREDITATION_LABEL: Record<string, string> = {
   pending: "Pendiente",
-  accredited: "Acreditado",
+  accredited: "Presente",
   rejected: "Rechazado",
   cancelled: "Cancelado",
   no_show: "No asistió",

@@ -14,7 +14,7 @@ export function VerifyButton({ token }: { token: string }) {
       variant="primary"
       disabled={pending}
       onClick={() => {
-        if (!confirm("¿Confirmas que este participante fue verificado y debe pasar a Acreditado?")) return;
+        if (!confirm("¿Confirmas que este participante fue verificado y debe marcarse como presente?")) return;
         startTransition(async () => {
           const result = await verifyDebaterAction(token);
           if (!result.ok) alert(result.error);

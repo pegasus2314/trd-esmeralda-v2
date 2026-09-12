@@ -52,12 +52,19 @@ export async function createRegistration(
       coach_name: data.coachName,
       coach_email: data.coachEmail,
       coach_phone: data.coachPhone,
+      coach_id_number: data.coachIdNumber,
+      coach_subject_area: data.coachSubjectArea,
       coach_school: data.coachSchool,
       coach_district: data.coachDistrict || data.district || null,
       debaters: data.debaters.map((d) => ({
         first_name: d.firstName,
         last_name: d.lastName,
+        grade: d.grade,
         email: d.email || null,
+        phone: d.phone,
+        id_number: d.idNumber,
+        allergies: d.allergies || null,
+        medications: d.medications || null,
         role: d.role,
       })),
     },
@@ -66,6 +73,9 @@ export async function createRegistration(
   if (rpcError) {
     if (rpcError.message.includes("EVENT_NOT_OPEN")) {
       return { ok: false, error: "Las inscripciones no están abiertas en este momento." };
+    }
+    if (rpcError.message.includes("DEBATER_COUNT_OUT_OF_RANGE")) {
+      return { ok: false, error: "Cada equipo debe tener entre 3 y 5 debatientes." };
     }
     return { ok: false, error: "No se pudo registrar el equipo: " + rpcError.message };
   }

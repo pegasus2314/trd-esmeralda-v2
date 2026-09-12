@@ -15,7 +15,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
 
 const NAV_ITEMS: { href: string; label: string; roles: StaffRole[] }[] = [
   { href: "/admin", label: "Resumen", roles: ["admin_maestro", "admin", "coordinador"] },
-  { href: "/admin/escanear", label: "📷 Escanear QR", roles: ACCREDITATION_ROLES },
+  { href: "/admin/acreditacion", label: "✅ Acreditación", roles: ACCREDITATION_ROLES },
   { href: "/admin/equipos", label: "Equipos", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/rondas", label: "Rondas", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/enfrentamientos", label: "Enfrentamientos", roles: ["admin_maestro", "admin", "coordinador"] },

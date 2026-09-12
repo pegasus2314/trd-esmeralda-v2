@@ -2,15 +2,23 @@
 
 import { useActionState, useState } from "react";
 import { registerTeamAction } from "@/lib/actions/registration-actions";
+import { SUBJECT_AREAS } from "@/lib/validation";
 import { Field, FormMessage, inputClass } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/Button";
 
+const MIN_DEBATERS = 3;
+const MAX_DEBATERS = 5;
+
 type DebaterRow = { key: number; role: "captain" | "debater" | "alternate" };
+
+let seedKey = 0;
+function makeInitialRows(): DebaterRow[] {
+  return Array.from({ length: MIN_DEBATERS }, () => ({ key: seedKey++, role: "debater" as const }));
+}
 
 export function RegistrationForm() {
   const [state, action, pending] = useActionState(registerTeamAction, undefined);
-  const [rows, setRows] = useState<DebaterRow[]>([{ key: 0, role: "debater" }]);
-  const [nextKey, setNextKey] = useState(1);
+  const [rows, setRows] = useState<DebaterRow[]>(makeInitialRows);
 
   if (state?.ok) {
     return (
@@ -68,11 +76,26 @@ export function RegistrationForm() {
           <Field label="Nombre completo">
             <input className={inputClass} name="coachName" required placeholder="Nombre y apellidos" />
           </Field>
+          <Field label="Cédula">
+            <input className={inputClass} name="coachIdNumber" required placeholder="000-0000000-0" />
+          </Field>
           <Field label="Correo electrónico">
             <input className={inputClass} type="email" name="coachEmail" required placeholder="coach@centro.edu.do" />
           </Field>
           <Field label="Teléfono">
             <input className={inputClass} name="coachPhone" required placeholder="809-000-0000" />
+          </Field>
+          <Field label="Área curricular">
+            <select className={inputClass} name="coachSubjectArea" required defaultValue="">
+              <option value="" disabled>
+                Selecciona un área
+              </option>
+              {SUBJECT_AREAS.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Centro educativo">
             <input className={inputClass} name="coachSchool" required placeholder="Centro educativo" />
@@ -85,59 +108,95 @@ export function RegistrationForm() {
 
       <div className="relative my-7 border-t border-line">
         <span className="absolute -top-2.5 bg-navy-800 pr-2.5 text-[10px] font-extrabold tracking-[0.16em] text-cyan">
-          INTEGRANTES
+          INTEGRANTES (MÍNIMO {MIN_DEBATERS}, MÁXIMO {MAX_DEBATERS})
         </span>
       </div>
 
-      <div className="grid gap-2.5">
+      <div className="grid gap-3">
         {rows.map((row, i) => (
-          <div key={row.key} className="grid grid-cols-1 gap-2.5 rounded-xl border border-line bg-navy-900 p-3.5 md:grid-cols-[1fr_1fr_1.1fr_.8fr_auto]">
-            <input
-              className={inputClass}
-              name={`debater_first_${i}`}
-              required
-              placeholder="Nombre"
-              aria-label="Nombre del integrante"
-            />
-            <input
-              className={inputClass}
-              name={`debater_last_${i}`}
-              required
-              placeholder="Apellido"
-              aria-label="Apellido del integrante"
-            />
-            <input
-              className={inputClass}
-              type="email"
-              name={`debater_email_${i}`}
-              required
-              placeholder="Correo (para su QR)"
-              aria-label="Correo del integrante"
-            />
-            <select className={inputClass} name={`debater_role_${i}`} defaultValue={row.role}>
-              <option value="captain">Capitán</option>
-              <option value="debater">Debatiente</option>
-              <option value="alternate">Suplente</option>
-            </select>
-            <button
-              type="button"
-              onClick={() => setRows((r) => r.filter((x) => x.key !== row.key))}
-              disabled={rows.length === 1}
-              className="min-h-11 rounded-lg border border-danger/35 px-3.5 font-bold text-[#ff9999] disabled:opacity-40"
-              aria-label="Eliminar integrante"
-            >
-              ×
-            </button>
+          <div key={row.key} className="rounded-xl border border-line bg-navy-900 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-extrabold text-cyan">Integrante {i + 1}</span>
+              <button
+                type="button"
+                onClick={() => setRows((r) => r.filter((x) => x.key !== row.key))}
+                disabled={rows.length <= MIN_DEBATERS}
+                className="rounded-lg border border-danger/35 px-3 py-1 text-xs font-bold text-[#ff9999] disabled:opacity-40"
+                aria-label="Eliminar integrante"
+              >
+                Quitar
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+              <input
+                className={inputClass}
+                name={`debater_first_${i}`}
+                required
+                placeholder="Nombre"
+                aria-label="Nombre del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_last_${i}`}
+                required
+                placeholder="Apellido"
+                aria-label="Apellido del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_grade_${i}`}
+                required
+                placeholder="Curso/grado (ej. 4to Bachillerato)"
+                aria-label="Curso del integrante"
+              />
+              <input
+                className={inputClass}
+                type="email"
+                name={`debater_email_${i}`}
+                required
+                placeholder="Correo (para su QR)"
+                aria-label="Correo del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_phone_${i}`}
+                required
+                placeholder="Teléfono"
+                aria-label="Teléfono del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_id_number_${i}`}
+                required
+                placeholder="Cédula (000-0000000-0)"
+                aria-label="Cédula del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_allergies_${i}`}
+                placeholder="Alergias (si aplica)"
+                aria-label="Alergias del integrante"
+              />
+              <input
+                className={inputClass}
+                name={`debater_medications_${i}`}
+                placeholder="Medicamentos (si aplica)"
+                aria-label="Medicamentos del integrante"
+              />
+              <select className={inputClass} name={`debater_role_${i}`} defaultValue={row.role} aria-label="Rol del integrante">
+                <option value="captain">Capitán</option>
+                <option value="debater">Debatiente</option>
+                <option value="alternate">Suplente</option>
+              </select>
+            </div>
           </div>
         ))}
       </div>
       <button
         type="button"
-        onClick={() => {
-          setRows((r) => [...r, { key: nextKey, role: "debater" }]);
-          setNextKey((k) => k + 1);
-        }}
-        className="mt-3.5 mb-5 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-cyan/50 bg-cyan/5 px-4 py-2.5 text-sm font-extrabold text-cyan"
+        onClick={() => setRows((r) => [...r, { key: seedKey++, role: "debater" }])}
+        disabled={rows.length >= MAX_DEBATERS}
+        className="mt-3.5 mb-5 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-cyan/50 bg-cyan/5 px-4 py-2.5 text-sm font-extrabold text-cyan disabled:opacity-40"
       >
         ＋ Añadir integrante
       </button>

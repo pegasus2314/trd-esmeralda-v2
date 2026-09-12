@@ -1,6 +1,15 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { requireRole, ACCREDITATION_ROLES } from "@/lib/dal/auth";
+import { getCurrentEvent } from "@/lib/dal/public";
+
+export const ACCREDITATION_STATUS_LABEL: Record<string, string> = {
+  pending: "Pendiente",
+  accredited: "Presente",
+  rejected: "Rechazado",
+  cancelled: "Cancelado",
+  no_show: "No asistió",
+};
 
 export type AccreditationFicha = {
   id: string;
@@ -13,6 +22,9 @@ export type AccreditationFicha = {
   email: string | null;
   phone: string | null;
   grade: string | null;
+  idNumber: string | null;
+  allergies: string | null;
+  medications: string | null;
   accreditationStatus: "pending" | "accredited" | "rejected" | "cancelled" | "no_show";
   accreditationVerifiedAt: string | null;
 };
@@ -32,7 +44,7 @@ export async function getDebaterForAccreditation(
   const { data, error } = await db
     .from("debaters")
     .select(
-      "id, accreditation_token, first_name, last_name, role, email, phone, grade, accreditation_status, accreditation_verified_at, teams(team_name, school_name, district)"
+      "id, accreditation_token, first_name, last_name, role, email, phone, grade, id_number, allergies, medications, accreditation_status, accreditation_verified_at, teams(team_name, school_name, district)"
     )
     .eq("accreditation_token", token)
     .maybeSingle();
@@ -51,6 +63,9 @@ export async function getDebaterForAccreditation(
     email: data.email,
     phone: data.phone,
     grade: data.grade,
+    idNumber: data.id_number,
+    allergies: data.allergies,
+    medications: data.medications,
     accreditationStatus: data.accreditation_status,
     accreditationVerifiedAt: data.accreditation_verified_at,
   };
@@ -79,7 +94,8 @@ export async function verifyDebaterByToken(token: string): Promise<VerifyResult>
 
   if (!current) return { ok: false, error: "Participante no encontrado." };
   if (current.accreditation_status !== "pending") {
-    return { ok: false, error: `Este participante ya tiene estado "${current.accreditation_status}".` };
+    const label = ACCREDITATION_STATUS_LABEL[current.accreditation_status] ?? current.accreditation_status;
+    return { ok: false, error: `Este participante ya tiene estado "${label}".` };
   }
 
   const now = new Date().toISOString();
@@ -108,4 +124,45 @@ export async function verifyDebaterByToken(token: string): Promise<VerifyResult>
   });
 
   return { ok: true };
+}
+
+export type AccreditationRosterRow = {
+  id: string;
+  token: string;
+  fullName: string;
+  role: string;
+  teamName: string;
+  accreditationStatus: "pending" | "accredited" | "rejected" | "cancelled" | "no_show";
+};
+
+/**
+ * Lista liviana (sin PII sensible como cédula/alergias) de todos los
+ * debatientes del evento activo, para el panel de "Acreditación" donde
+ * el staff ubica a alguien manualmente sin tener que escanear su QR.
+ * Los datos completos solo aparecen en la ficha individual.
+ */
+export async function listDebatersForAccreditation(): Promise<AccreditationRosterRow[]> {
+  await requireRole(ACCREDITATION_ROLES);
+  const event = await getCurrentEvent();
+  if (!event) return [];
+
+  const { data, error } = await db
+    .from("debaters")
+    .select("id, accreditation_token, first_name, last_name, role, accreditation_status, teams!inner(team_name, event_id)")
+    .eq("teams.event_id", event.id)
+    .order("last_name");
+
+  if (error || !data) return [];
+
+  return data.map((d) => {
+    const team = Array.isArray(d.teams) ? d.teams[0] : d.teams;
+    return {
+      id: d.id,
+      token: d.accreditation_token,
+      fullName: `${d.first_name} ${d.last_name}`.trim(),
+      role: d.role,
+      teamName: team?.team_name ?? "—",
+      accreditationStatus: d.accreditation_status,
+    };
+  });
 }

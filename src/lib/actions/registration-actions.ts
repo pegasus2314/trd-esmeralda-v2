@@ -19,7 +19,12 @@ export async function registerTeamAction(
     debaters.push({
       firstName: String(firstName),
       lastName: String(lastName),
+      grade: String(formData.get(`debater_grade_${i}`) ?? ""),
       email: String(formData.get(`debater_email_${i}`) ?? ""),
+      phone: String(formData.get(`debater_phone_${i}`) ?? ""),
+      idNumber: String(formData.get(`debater_id_number_${i}`) ?? ""),
+      allergies: String(formData.get(`debater_allergies_${i}`) ?? ""),
+      medications: String(formData.get(`debater_medications_${i}`) ?? ""),
       role: (formData.get(`debater_role_${i}`) as "captain" | "debater" | "alternate") ?? "debater",
     });
   }
@@ -34,6 +39,8 @@ export async function registerTeamAction(
     coachName: String(formData.get("coachName") ?? ""),
     coachEmail: String(formData.get("coachEmail") ?? ""),
     coachPhone: String(formData.get("coachPhone") ?? ""),
+    coachIdNumber: String(formData.get("coachIdNumber") ?? ""),
+    coachSubjectArea: String(formData.get("coachSubjectArea") ?? ""),
     coachSchool: String(formData.get("coachSchool") ?? ""),
     coachDistrict: String(formData.get("coachDistrict") ?? ""),
     consent: formData.get("consent") === "on" ? "on" : ("" as "on"),
