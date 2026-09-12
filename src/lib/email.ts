@@ -1,8 +1,16 @@
 import "server-only";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "TRD La Regional Esmeralda <onboarding@resend.dev>";
+// Perezoso por la misma razón que src/lib/db.ts: no crear nada a nivel
+// de módulo que dependa de variables de entorno, para que un problema
+// de configuración nunca tumbe el build completo — solo falle, con un
+// mensaje claro, si de verdad se intenta enviar un correo.
+let resendClient: Resend | null = null;
+function getResend(): Resend {
+  if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
+}
+const FROM = () => process.env.EMAIL_FROM ?? "TRD La Regional Esmeralda <onboarding@resend.dev>";
 
 function escapeHtml(v: string): string {
   return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]!));
@@ -85,8 +93,8 @@ export async function sendAccreditationEmail(
   }
 
   try {
-    const { error } = await resend.emails.send({
-      from: FROM,
+    const { error } = await getResend().emails.send({
+      from: FROM(),
       to: input.to,
       subject: `Tu credencial de acreditación · ${input.eventName}`,
       html: accreditationEmailHtml(input),
