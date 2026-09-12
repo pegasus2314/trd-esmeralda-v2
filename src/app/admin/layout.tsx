@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentStaff, type StaffRole } from "@/lib/dal/auth";
+import { getCurrentStaff, ACCREDITATION_ROLES, type StaffRole } from "@/lib/dal/auth";
 import { logoutAction } from "@/lib/actions/auth-actions";
 import { Button } from "@/components/ui/Button";
 
@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<StaffRole, string> = {
 
 const NAV_ITEMS: { href: string; label: string; roles: StaffRole[] }[] = [
   { href: "/admin", label: "Resumen", roles: ["admin_maestro", "admin", "coordinador"] },
+  { href: "/admin/escanear", label: "📷 Escanear QR", roles: ACCREDITATION_ROLES },
   { href: "/admin/equipos", label: "Equipos", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/rondas", label: "Rondas", roles: ["admin_maestro", "admin", "coordinador"] },
   { href: "/admin/enfrentamientos", label: "Enfrentamientos", roles: ["admin_maestro", "admin", "coordinador"] },
@@ -50,7 +51,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         </div>
       </header>
 
-      {visibleItems.length > 1 && (
+      {visibleItems.length > 0 && (
         <nav className="flex flex-wrap gap-2 border-b border-line bg-navy-900 px-[4vw] py-3">
           {visibleItems.map((item) => (
             <Link

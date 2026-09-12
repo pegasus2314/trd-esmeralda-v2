@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { getCurrentStaff, ADMIN_PANEL_ROLES } from "@/lib/dal/auth";
+import Link from "next/link";
+import { getCurrentStaff, ADMIN_PANEL_ROLES, ACCREDITATION_ROLES } from "@/lib/dal/auth";
 import { getOverview } from "@/lib/dal/admin";
 import { getCurrentEvent } from "@/lib/dal/public";
 import { Card } from "@/components/ui/primitives";
@@ -21,7 +22,7 @@ const ROLE_HELP: Record<string, { title: string; body: string }> = {
   },
   logistica: {
     title: "Logística",
-    body: "Tienes acceso de consulta a los equipos y participantes registrados para apoyar la coordinación operativa del día del evento.",
+    body: "Tienes acceso de consulta a los equipos y participantes registrados, y puedes escanear el QR de un participante para consultar su ficha y apoyar la acreditación si hace falta.",
   },
   evaluador: {
     title: "Evaluador",
@@ -41,6 +42,14 @@ export default async function AdminOverviewPage() {
         <Card className="mt-5 p-6">
           <h2 className="text-lg font-bold text-celeste">{help?.title ?? staff.role}</h2>
           <p className="mt-2 text-sm text-muted">{help?.body ?? "Consulta con administración sobre tus permisos."}</p>
+          {ACCREDITATION_ROLES.includes(staff.role) && (
+            <Link
+              href="/admin/escanear"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan bg-cyan px-5 py-3 font-bold text-cyan-ink"
+            >
+              📷 Escanear QR de participante
+            </Link>
+          )}
         </Card>
       </div>
     );
