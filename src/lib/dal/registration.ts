@@ -2,22 +2,31 @@ import "server-only";
 import { db } from "@/lib/db";
 import { getCurrentEvent } from "@/lib/dal/public";
 import { RegistrationSchema, type RegistrationInput } from "@/lib/validation";
+import { sendInitialAccreditationEmails } from "@/lib/dal/qr-delivery";
 
 export type CreateRegistrationResult =
-  | { ok: true }
+  | { ok: true; emailsSent: number; emailsFailed: number }
   | { ok: false; error: string };
 
 /**
  * Inserción pública de un equipo nuevo. Nadie autenticado necesita estar
- * aquí — esto es exactamente el equivalente del "insert público" del
- * sistema anterior, pero ahora corre en el servidor con la service role,
- * así que el status siempre se fuerza a "pending" y accreditation_status
+ * aquí. El status siempre se fuerza a "pending" y accreditation_status
  * de cada debatiente siempre queda en su default: nunca llega desde el
  * cliente, a diferencia del sistema viejo donde un POST manipulado podía
  * autoasignarse "accredited" desde el registro.
+ *
+ * El equipo + coach + debatientes + registro se insertan en UNA sola
+ * transacción vía trd.create_team_registration() (ver migración
+ * create_team_registration_atomic_rpc). Antes se hacían 4 inserts
+ * separados desde el cliente: una prueba real mostró que si el segundo
+ * paso fallaba (timeout de red), el equipo del primer paso quedaba
+ * "huérfano" en la base de datos, sin coach ni participantes. Con la
+ * función atómica, cualquier falla revierte todo — nunca queda un
+ * registro a medias.
  */
 export async function createRegistration(
-  input: RegistrationInput
+  input: RegistrationInput,
+  origin: string
 ): Promise<CreateRegistrationResult> {
   const parsed = RegistrationSchema.safeParse(input);
   if (!parsed.success) {
@@ -31,63 +40,50 @@ export async function createRegistration(
     return { ok: false, error: "Las inscripciones no están abiertas en este momento." };
   }
 
-  const { data: team, error: teamError } = await db
-    .from("teams")
-    .insert({
-      event_id: event.id,
+  const { data: teamId, error: rpcError } = await db.rpc("create_team_registration", {
+    payload: {
+      event_slug: event.slug,
       team_name: data.teamName,
       school_name: data.schoolName,
       district: data.district || null,
       contact_name: data.contactName,
       contact_email: data.contactEmail,
       contact_phone: data.contactPhone || null,
-      status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (teamError || !team) {
-    return { ok: false, error: "No se pudo registrar el equipo: " + (teamError?.message ?? "error desconocido") };
-  }
-
-  const { error: coachError } = await db.from("coaches").insert({
-    team_id: team.id,
-    full_name: data.coachName,
-    email: data.coachEmail,
-    phone: data.coachPhone,
-    school_name: data.coachSchool,
-    district: data.coachDistrict || data.district || null,
-    consent: true,
+      coach_name: data.coachName,
+      coach_email: data.coachEmail,
+      coach_phone: data.coachPhone,
+      coach_school: data.coachSchool,
+      coach_district: data.coachDistrict || data.district || null,
+      debaters: data.debaters.map((d) => ({
+        first_name: d.firstName,
+        last_name: d.lastName,
+        email: d.email || null,
+        role: d.role,
+      })),
+    },
   });
-  if (coachError) {
-    return { ok: false, error: "No se pudo registrar el coach: " + coachError.message };
+
+  if (rpcError) {
+    if (rpcError.message.includes("EVENT_NOT_OPEN")) {
+      return { ok: false, error: "Las inscripciones no están abiertas en este momento." };
+    }
+    return { ok: false, error: "No se pudo registrar el equipo: " + rpcError.message };
+  }
+  if (!teamId) {
+    return { ok: false, error: "No se pudo registrar el equipo." };
   }
 
-  const { error: debatersError } = await db.from("debaters").insert(
-    data.debaters.map((d) => ({
-      team_id: team.id,
-      first_name: d.firstName,
-      last_name: d.lastName,
-      email: d.email || null,
-      role: d.role,
-      consent: true,
-    }))
-  );
-  if (debatersError) {
-    return { ok: false, error: "No se pudieron registrar los integrantes: " + debatersError.message };
-  }
+  // El correo con el QR se manda apenas queda registrado, tal como se
+  // especificó — la acreditación real (verificar + cambiar de estado)
+  // sigue ocurriendo únicamente el día del evento, cuando el staff
+  // escanea el QR. Un correo que falle no revierte la inscripción; ya
+  // quedó guardada de forma atómica, y el participante puede pedir un
+  // reenvío después desde el panel.
+  const { data: insertedDebaters } = await db.from("debaters").select("id").eq("team_id", teamId as string);
+  const debaterIds = (insertedDebaters ?? []).map((d) => d.id);
+  const { sent, failed } = await sendInitialAccreditationEmails(debaterIds, origin);
 
-  const { error: regError } = await db.from("registrations").insert({
-    event_id: event.id,
-    team_id: team.id,
-    status: "pending",
-    payload: { team_name: data.teamName, school_name: data.schoolName },
-  });
-  if (regError) {
-    return { ok: false, error: "No se pudo registrar la solicitud: " + regError.message };
-  }
-
-  return { ok: true };
+  return { ok: true, emailsSent: sent, emailsFailed: failed };
 }
 
 export async function countRegisteredAtSchool(schoolName: string): Promise<number> {

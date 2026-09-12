@@ -3,7 +3,7 @@ import { z } from "zod";
 export const DebaterInputSchema = z.object({
   firstName: z.string().trim().min(1, "El nombre es obligatorio."),
   lastName: z.string().trim().min(1, "El apellido es obligatorio."),
-  email: z.email("Correo inválido.").optional().or(z.literal("")),
+  email: z.email("Correo del integrante inválido u obligatorio (se usa para enviarle su QR de acreditación)."),
   role: z.enum(["captain", "debater", "alternate"]).default("debater"),
 });
 

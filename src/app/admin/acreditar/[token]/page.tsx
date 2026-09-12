@@ -3,11 +3,23 @@ import { getDebaterForAccreditation } from "@/lib/dal/accreditation";
 import { Card, Badge } from "@/components/ui/primitives";
 import { VerifyButton } from "@/components/admin/VerifyButton";
 
-const STATUS_TONE = { pending: "warning", accredited: "success", rejected: "danger" } as const;
-const STATUS_LABEL = { pending: "PENDIENTE", accredited: "ACREDITADO", rejected: "RECHAZADO" } as const;
+const STATUS_TONE = {
+  pending: "warning",
+  accredited: "success",
+  rejected: "danger",
+  cancelled: "danger",
+  no_show: "danger",
+} as const;
+const STATUS_LABEL = {
+  pending: "PENDIENTE",
+  accredited: "ACREDITADO",
+  rejected: "RECHAZADO",
+  cancelled: "CANCELADO",
+  no_show: "NO ASISTIÓ",
+} as const;
 
-export default async function AcreditarPage({ params }: PageProps<"/admin/acreditar/[id]">) {
-  const { id } = await params;
+export default async function AcreditarPage({ params }: PageProps<"/admin/acreditar/[token]">) {
+  const { token } = await params;
   const staff = await getCurrentStaff();
 
   if (!staff) {
@@ -16,7 +28,7 @@ export default async function AcreditarPage({ params }: PageProps<"/admin/acredi
         <h1 className="text-xl font-bold">Sesión requerida</h1>
         <p className="mt-2 text-sm text-muted">
           Este QR abre una ficha protegida. Inicia sesión con una cuenta de acreditación,
-          coordinación o administración para continuar.
+          logística, coordinación o administración para continuar.
         </p>
         <a href="/acceso" className="mt-4 inline-block rounded-lg border border-cyan bg-cyan px-5 py-2.5 font-bold text-cyan-ink">
           Ir a iniciar sesión
@@ -36,12 +48,15 @@ export default async function AcreditarPage({ params }: PageProps<"/admin/acredi
     );
   }
 
-  const debater = await getDebaterForAccreditation(id);
+  const debater = await getDebaterForAccreditation(token);
   if (!debater) {
     return (
       <Card className="mx-auto max-w-lg p-7 text-center">
         <h1 className="text-xl font-bold">QR no válido</h1>
-        <p className="mt-2 text-sm text-muted">No se encontró este participante.</p>
+        <p className="mt-2 text-sm text-muted">
+          No se encontró este participante. El QR puede haber sido regenerado — pide que te
+          reenvíen el código actualizado.
+        </p>
       </Card>
     );
   }
@@ -80,16 +95,25 @@ export default async function AcreditarPage({ params }: PageProps<"/admin/acredi
 
       {debater.accreditationStatus === "accredited" ? (
         <div className="mt-5 rounded-xl border border-cyan/20 bg-cyan/5 p-4">
-          <strong className="text-cyan">✓ Participante acreditado</strong>
-          <p className="mt-1 text-xs text-muted">La verificación ya está registrada en el sistema.</p>
+          <strong className="text-cyan">✓ Participante ya acreditado</strong>
+          <p className="mt-1 text-xs text-muted">
+            {debater.accreditationVerifiedAt &&
+              `Registrado el ${new Date(debater.accreditationVerifiedAt).toLocaleString("es-DO")}.`}
+          </p>
         </div>
-      ) : (
+      ) : debater.accreditationStatus === "pending" ? (
         <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-cyan/20 bg-cyan/5 p-4">
           <div>
             <strong className="text-sm">¿Los datos son correctos?</strong>
             <p className="mt-0.5 text-xs text-muted">Confirma la identidad antes de acreditar.</p>
           </div>
-          <VerifyButton debaterId={debater.id} />
+          <VerifyButton token={debater.token} />
+        </div>
+      ) : (
+        <div className="mt-5 rounded-xl border border-danger/25 bg-danger-bg p-4">
+          <strong className="text-[#ff9999]">
+            Este participante no puede acreditarse (estado: {STATUS_LABEL[debater.accreditationStatus]}).
+          </strong>
         </div>
       )}
     </Card>

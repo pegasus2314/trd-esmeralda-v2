@@ -18,8 +18,16 @@ export function RegistrationForm() {
         <div className="mb-2 text-3xl">✓</div>
         <h2 className="text-xl font-bold text-success">Inscripción enviada</h2>
         <p className="mt-2 text-sm text-muted">
-          Quedará pendiente de revisión. La organización te contactará por el correo indicado.
+          Quedará pendiente de revisión. Cada integrante con correo registrado recibirá su código
+          QR de acreditación por email.
         </p>
+        {!!state.emailsFailed && (
+          <p className="mt-3 text-xs text-warning">
+            {state.emailsFailed === 1
+              ? "No se pudo enviar el correo a un integrante — se le puede reenviar desde el panel administrativo."
+              : `No se pudo enviar el correo a ${state.emailsFailed} integrantes — se les puede reenviar desde el panel administrativo.`}
+          </p>
+        )}
       </div>
     );
   }
@@ -102,7 +110,8 @@ export function RegistrationForm() {
               className={inputClass}
               type="email"
               name={`debater_email_${i}`}
-              placeholder="Correo (opcional)"
+              required
+              placeholder="Correo (para su QR)"
               aria-label="Correo del integrante"
             />
             <select className={inputClass} name={`debater_role_${i}`} defaultValue={row.role}>

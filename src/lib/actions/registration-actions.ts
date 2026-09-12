@@ -1,9 +1,10 @@
 "use server";
 
 import { createRegistration } from "@/lib/dal/registration";
+import { getOrigin } from "@/lib/origin";
 import type { RegistrationInput } from "@/lib/validation";
 
-export type RegisterFormState = { ok: boolean; error?: string } | undefined;
+export type RegisterFormState = { ok: boolean; error?: string; emailsFailed?: number } | undefined;
 
 export async function registerTeamAction(
   _prev: RegisterFormState,
@@ -40,7 +41,8 @@ export async function registerTeamAction(
     debaters,
   };
 
-  const result = await createRegistration(input);
+  const origin = await getOrigin();
+  const result = await createRegistration(input, origin);
   if (!result.ok) return { ok: false, error: result.error };
-  return { ok: true };
+  return { ok: true, emailsFailed: result.emailsFailed };
 }

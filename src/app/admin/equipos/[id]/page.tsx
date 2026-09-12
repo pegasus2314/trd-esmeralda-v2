@@ -6,6 +6,7 @@ import { Badge, Card } from "@/components/ui/primitives";
 import { TeamActions } from "@/components/admin/TeamActions";
 import { QrButton } from "@/components/admin/QrDialog";
 import { DeleteDebaterButton } from "@/components/admin/DeleteDebaterButton";
+import { QrActions } from "@/components/admin/QrActions";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendiente",
@@ -23,6 +24,8 @@ const ACCREDITATION_LABEL: Record<string, string> = {
   pending: "Pendiente",
   accredited: "Acreditado",
   rejected: "Rechazado",
+  cancelled: "Cancelado",
+  no_show: "No asistió",
 };
 
 export default async function TeamDetailPage({ params }: PageProps<"/admin/equipos/[id]">) {
@@ -32,7 +35,7 @@ export default async function TeamDetailPage({ params }: PageProps<"/admin/equip
 
   const origin = await getOrigin();
   const debatersWithQr = await Promise.all(
-    team.debaters.map(async (d) => ({ ...d, qr: await generateAccreditationQr(d.id, origin) }))
+    team.debaters.map(async (d) => ({ ...d, qr: await generateAccreditationQr(d.accreditationToken, origin) }))
   );
 
   return (
@@ -95,7 +98,7 @@ export default async function TeamDetailPage({ params }: PageProps<"/admin/equip
         ) : (
           <div className="grid gap-2">
             {debatersWithQr.map((d, i) => (
-              <div key={d.id} className="grid grid-cols-[28px_1fr_auto_auto] items-center gap-3 rounded-lg border border-line bg-black/10 p-3">
+              <div key={d.id} className="grid grid-cols-[28px_1fr_auto_auto_auto] items-center gap-3 rounded-lg border border-line bg-black/10 p-3">
                 <span className="grid h-7 w-7 place-items-center rounded-lg bg-cyan/10 text-xs font-extrabold text-cyan">
                   {i + 1}
                 </span>
@@ -105,9 +108,11 @@ export default async function TeamDetailPage({ params }: PageProps<"/admin/equip
                     {d.role === "captain" ? "Capitán" : d.role === "alternate" ? "Suplente" : "Debatiente"}
                     {" · "}
                     {ACCREDITATION_LABEL[d.accreditationStatus]}
+                    {d.qrSentAt ? ` · QR enviado (${d.qrSentCount}x)` : " · QR no enviado"}
                   </span>
                 </div>
                 <QrButton name={d.fullName} qrDataUrl={d.qr} />
+                <QrActions debaterId={d.id} teamId={team.id} hasEmail={!!d.email} />
                 <DeleteDebaterButton debaterId={d.id} teamId={team.id} />
               </div>
             ))}

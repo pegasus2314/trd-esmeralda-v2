@@ -69,6 +69,9 @@ export type TeamDetail = {
     role: string;
     email: string | null;
     accreditationStatus: string;
+    accreditationToken: string;
+    qrSentAt: string | null;
+    qrSentCount: number;
   }[];
 };
 
@@ -80,7 +83,7 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
     db.from("coaches").select("full_name, email, phone").eq("team_id", teamId).maybeSingle(),
     db
       .from("debaters")
-      .select("id, first_name, last_name, role, email, accreditation_status")
+      .select("id, first_name, last_name, role, email, accreditation_status, accreditation_token, qr_sent_at, qr_sent_count")
       .eq("team_id", teamId)
       .order("created_at"),
   ]);
@@ -103,6 +106,9 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
       role: d.role,
       email: d.email,
       accreditationStatus: d.accreditation_status,
+      accreditationToken: d.accreditation_token,
+      qrSentAt: d.qr_sent_at,
+      qrSentCount: d.qr_sent_count,
     })),
   };
 }

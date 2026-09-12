@@ -26,12 +26,13 @@ export type StaffUser = {
  */
 export const ADMIN_PANEL_ROLES: StaffRole[] = ['admin_maestro', 'admin', 'coordinador']
 
-/** Roles que pueden verificar y acreditar participantes por QR. */
+/** Roles que pueden consultar el QR de un participante y acreditarlo. */
 export const ACCREDITATION_ROLES: StaffRole[] = [
   'admin_maestro',
   'admin',
   'coordinador',
   'acreditacion',
+  'logistica',
 ]
 
 /**
